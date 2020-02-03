@@ -31,7 +31,7 @@ def calc_vw_midprice(bid_arr: np.array, ask_arr: np.array, volume: int):
     Calculate volume weighted midprice
     bid_arr: bid orders (prices-volume-timestamp)
     ask_arr: ask orders (prices-volume-timestamp)
-    volume: volume until which prices should be considered
+    volume: volume up to which the average price should be calculated
     """
     ask_vwp = calc_vw_price(ask_arr, volume)
     bid_vwp = calc_vw_price(bid_arr, volume)
