@@ -1,41 +1,13 @@
+"""
+Generic calculations 
+"""
 import logging
-import requests
 import numpy as np
 
+#### setup
 logger = logging.getLogger(__name__)
 
-# constants
-URL_PUBLIC = "https://api.kraken.com/0/public"
-
-# get current unix time
-def get_server_time():
-    """
-    Get current time from Kraken server
-    """
-    r = requests.get(f"{URL_PUBLIC}/Time")
-    if r.status_code == 200:
-        server_time = r.json()["result"]["rfc1123"]
-        logger.debug('Returning server time')
-        return server_time
-    else:
-        logging.debug(f"Server Time Request Failed: {r.status_code}")
-        return None
-
-
-def get_order_book_for_pair(x: str, z: str):
-    """
-    Load current order book for asset pair
-    """
-    r = requests.get(f"{URL_PUBLIC}/Depth?pair={x}{z}")
-    if r.status_code == 200:
-        order_book = r.json()["result"][f"X{x}Z{z}"]
-        logger.debug('Returning order book data')
-        return order_book
-    else:
-        logger.debug(f"Order Book Request Failed: {r.status_code}")
-        return None
-
-
+#### functions
 def calc_vw_price(arr: np.array, limit: int):
     """
     Calculate volume weighted average price for one side 
@@ -64,7 +36,7 @@ def calc_vw_midprice(bid_arr: np.array, ask_arr: np.array, volume: int):
     ask_vwp = calc_vw_price(ask_arr, volume)
     bid_vwp = calc_vw_price(bid_arr, volume)
     vwmp = np.mean([ask_vwp, bid_vwp])
-    logger.debug(f'Returning VWMP: {vwmp}')
+    logger.debug(f"Returning VWMP: {vwmp}")
     return vwmp
 
 
