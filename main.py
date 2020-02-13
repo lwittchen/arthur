@@ -23,7 +23,7 @@ depth = 10  # in percentage
 SLEEP_SECONDS = 2  # in seconds
 
 
-def main(assets):
+def main(asset_pair):
     """
     Load and log price information from kraken
     """
@@ -32,13 +32,13 @@ def main(assets):
     server_time_rfc, _ = kraken.get_server_time()
 
     # get open high low close data
-    ohlc: np.array = kraken.get_ohlc_for_pair(*assets, interval=1)
+    ohlc: np.array = kraken.get_ohlc(*asset_pair, interval=1)
 
     # get last trades
-    lasttrades: np.array = kraken.get_lasttrades_for_pair(*assets)
+    lasttrades: np.array = kraken.get_lasttrades(*asset_pair)
 
     # order book: dict with ask and bid information
-    _, asks, bids = kraken.get_orderbook_for_pair(*assets)
+    _, asks, bids = kraken.get_orderbook(*asset_pair)
 
     # do some calculations
     best_bid, best_ask, midprice = ut.calc_midprice(bids, asks)
@@ -64,4 +64,4 @@ def main(assets):
 
 if __name__ == "__main__":
     while True:
-        main(assets=("ETH", "USD"))
+        main(asset_pair=("ETH", "USD"))

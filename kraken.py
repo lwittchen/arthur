@@ -26,7 +26,7 @@ def get_server_time()  -> tuple:
         return None
 
 
-def get_orderbook_for_pair(asset_x: str, asset_z: str) -> tuple:
+def get_orderbook(asset_x: str, asset_z: str) -> tuple:
     """
     Load current order book for asset pair
     """
@@ -41,7 +41,7 @@ def get_orderbook_for_pair(asset_x: str, asset_z: str) -> tuple:
         return None
 
 
-def get_ohlc_for_pair(asset_x: str, asset_z: str, interval: int=1) -> np.array:
+def get_ohlc(asset_x: str, asset_z: str, interval: int=1) -> np.array:
     """
     Get OpenHighLowClose data from kraken for specific pair
     Always returns the latest 720 periods
@@ -57,11 +57,9 @@ def get_ohlc_for_pair(asset_x: str, asset_z: str, interval: int=1) -> np.array:
         return None
 
 
-def get_lasttrades_for_pair(asset_x: str, asset_z: str) -> np.array:
+def get_lasttrades(asset_x: str, asset_z: str) -> np.array:
     """
-    Get OpenHighLowClose data from kraken for specific pair
-    Always returns the latest 720 periods
-    Interval: period size in minutes
+    Get last trades from kraken for specific pair
     """
     r = requests.get(f"{URL_PUBLIC}/Trades?pair={asset_x}{asset_z}")
     if r.status_code == 200:
