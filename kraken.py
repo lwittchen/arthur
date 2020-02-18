@@ -19,7 +19,7 @@ def get_server_time() -> tuple:
     """
     response = send_public_request(endpoint="Time")
     if response["error"]:
-        logging.info(f"Server Time Request Failed: {r.status_code}")
+        logging.info(f"Server Time Request Failed: {response.status_code}")
         return None
     else:
         server_time_rfc, server_time_unix = (

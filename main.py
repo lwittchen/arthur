@@ -20,7 +20,7 @@ logging.basicConfig(
 SLEEP_SECONDS = 2  # in seconds
 
 
-def main(params, depth, theta):
+def main(params: dict, depth: int, theta: float):
     """
     Load and log price information from kraken
     """
