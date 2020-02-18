@@ -19,15 +19,15 @@ def calc_vw_price(arr: np.array, depth: int) -> float:
     depth: percentage of total volume for the respective side 
         which should be used for price calculation
     """
-    volume_total = np.sum(arr['volume'])
+    volume_total = np.sum(arr["volume"])
     volume_share = volume_total * depth / 100
 
-    idx = np.cumsum(arr['volume']) < volume_share
+    idx = np.cumsum(arr["volume"]) < volume_share
     if not idx.any():
         # Make sure that at least the best price
         # is used for the calculation
         idx[0] = True
-    avg_price = arr['price'][idx].mean()
+    avg_price = arr["price"][idx].mean()
     return avg_price
 
 
@@ -49,8 +49,8 @@ def calc_midprice(bids: np.array, asks: np.array) -> float:
     Calculate midprice based on give ask and bid quotes
     Midprice: average between best bid and best ask
     """
-    best_ask = asks['price'].min()
-    best_bid = bids['price'].max()
+    best_ask = asks["price"].min()
+    best_bid = bids["price"].max()
     return best_bid, best_ask, np.mean([best_ask, best_bid])
 
 
@@ -58,8 +58,8 @@ def get_lastprice(lasttrades: np.array) -> float:
     """
     Last price = max execution time
     """
-    idx = np.argmax(lasttrades['time'])
-    return lasttrades['price'][idx], parse_unix_ts(lasttrades['time'][idx])
+    idx = np.argmax(lasttrades["time"])
+    return lasttrades["price"][idx], parse_unix_ts(lasttrades["time"][idx])
 
 
 def parse_unix_ts(timestamp: int) -> datetime:
@@ -77,4 +77,35 @@ def calc_imbalances(vw_bid: float, vw_ask: float, lastprice: float):
     Calculate buy and sell imbalances following the SOBI strategy proposed 
     e.g. in: https://www.cis.upenn.edu/~mkearns/projects/sobi.html
     """
-    return lastprice-vw_bid, vw_ask-lastprice
+    return lastprice - vw_bid, vw_ask - lastprice
+
+
+def calc_sobi_signals(imb_bid: float, imb_ask: float, theta: float):
+    """
+    Calculate trade signal following the SOBI strategy proposed 
+    e.g. in: https://www.cis.upenn.edu/~mkearns/projects/sobi.html
+    """
+    if (imb_ask - imb_bid) > theta:
+        # buy signal
+        return 1
+    elif (imb_bid - imb_ask) > theta:
+        # sell signal
+        return -1
+    else:
+        # do nothing
+        return 0
+
+
+def get_log_msg(results: dict):
+    """
+    Merge all results to one large string to log the results in the command line
+    """
+    str_fmt = "{:<12}".format
+    num_fmt = "{:<6.2f}".format 
+    sep = f"\n {'*'*50}"
+    msg = ''
+    for key, item in results.items():
+        key_str = str_fmt(key)  
+        val_str = num_fmt(item) if isinstance(item, float) else str_fmt(item)
+        msg += f"\n {key_str}: {val_str}"
+    return msg + sep

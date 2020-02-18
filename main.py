@@ -16,14 +16,11 @@ logging.basicConfig(
     datefmt="%m-%d %H:%M:%S",
 )
 
-# user input
-depth = 10  # in percentage
-
 # system constants
 SLEEP_SECONDS = 2  # in seconds
 
 
-def main(asset_pair):
+def main(params, depth, theta):
     """
     Load and log price information from kraken
     """
@@ -32,36 +29,48 @@ def main(asset_pair):
     server_time_rfc, _ = kraken.get_server_time()
 
     # get open high low close data
-    ohlc: np.array = kraken.get_ohlc(*asset_pair, interval=1)
+    ohlc: np.array = kraken.get_ohlc(params, interval=1)
 
     # get last trades
-    lasttrades: np.array = kraken.get_lasttrades(*asset_pair)
+    lasttrades: np.array = kraken.get_lasttrades(params)
 
     # order book: dict with ask and bid information
-    _, asks, bids = kraken.get_orderbook(*asset_pair)
+    _, asks, bids = kraken.get_orderbook(params)
 
     # do some calculations
     best_bid, best_ask, midprice = ut.calc_midprice(bids, asks)
     lastprice, lastprice_time = ut.get_lastprice(lasttrades)
 
     vw_bid, vw_ask = ut.calc_vw_bid_and_offer(bids, asks, depth)
-    imb_bid, imb_ask = ut.calc_imbalances(vw_bid, vw_ask, lastprice) 
+    imb_bid, imb_ask = ut.calc_imbalances(vw_bid, vw_ask, lastprice)
+    sobi_signal = ut.calc_sobi_signals(imb_bid, imb_ask, theta)
+
+    # results
+    results = dict(
+        time=server_time_rfc,
+        lastprice=lastprice,
+        midprice=midprice,
+        best_bid=best_bid,
+        best_ask=best_ask,
+        vw_bid=vw_bid,
+        vw_ask = vw_ask,
+        imb_bid=imb_bid,
+        imb_ask=imb_ask,
+        sobi_signal=sobi_signal
+    )
 
     # log output to console
-    logging.info("==========")
-    logging.info(
-        f"Server time: {server_time_rfc}"
-    )
-    logging.info(f"{'Last Price:':<12}{lastprice:<6.2f}$ at {lastprice_time}")
-    logging.info(f"{'Midprice:':<12}{midprice:<6.2f}$")
-    logging.info(f"{'Best-Bid:':<10}{best_bid:<6.2f} - {'Best-Ask:':<10}{best_ask:<6.2f}")
-    logging.info(f"{'VW-Bid:':<10}{vw_bid:<6.2f} - {'VW-Ask:':<10}{vw_ask:<6.2f}")
-    logging.info(f"{'Imb-Bid:':<10}{imb_bid:<6.2f} - {'Imb-Ask:':<10}{imb_ask:<6.2f}")
-
+    log_msg = ut.get_log_msg(results)
+    logging.info(log_msg)
+    
     # conform to krakens call rate limit
     time.sleep(SLEEP_SECONDS)
 
 
 if __name__ == "__main__":
+    PARAMS = {"pair": "XETHZUSD"}
+    THETA = 0.5
+    DEPTH = 10  # in percentage
+
     while True:
-        main(asset_pair=("ETH", "USD"))
+        main(params=PARAMS, depth=DEPTH, theta=THETA)

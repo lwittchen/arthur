@@ -11,63 +11,83 @@ logger = logging.getLogger(__name__)
 #### constants
 URL_PUBLIC = "https://api.kraken.com/0/public"
 
+
 #### functions
-def get_server_time()  -> tuple:
+def get_server_time() -> tuple:
     """
     Get current time from Kraken server
     """
-    r = requests.get(f"{URL_PUBLIC}/Time")
-    if r.status_code == 200:
-        server_time_rfc, server_time_unix = r.json()["result"]["rfc1123"], r.json()["result"]["unixtime"]
+    response = send_public_request(endpoint="Time")
+    if response["error"]:
+        logging.info(f"Server Time Request Failed: {r.status_code}")
+        return None
+    else:
+        server_time_rfc, server_time_unix = (
+            response["result"]["rfc1123"],
+            response["result"]["unixtime"],
+        )
         logger.debug("Returning server time")
         return server_time_rfc, server_time_unix
-    else:
-        logging.debug(f"Server Time Request Failed: {r.status_code}")
-        return None
 
 
-def get_orderbook(asset_x: str, asset_z: str) -> tuple:
+def get_orderbook(params: dict) -> tuple:
     """
     Load current order book for asset pair
     """
-    r = requests.get(f"{URL_PUBLIC}/Depth?pair={asset_x}{asset_z}")
-    if r.status_code == 200:
-        orderbook = r.json()["result"][f"X{asset_x}Z{asset_z}"]
-        asks, bids = parse_orderbook_into_arr(orderbook)
-        logger.debug("Returning order book data")
-        return orderbook, asks, bids
-    else:
-        logger.debug(f"Order Book Request Failed: {r.status_code}")
+    response = send_public_request(endpoint="Depth", **params)
+    if response["error"]:
+        logging.info(f'Error while loading orderbook data: {response["error"]}')
         return None
+    else:
+        orderbook = response["result"][params["pair"]]
+        asks, bids = parse_orderbook_into_arr(orderbook)
+        return orderbook, asks, bids
 
 
-def get_ohlc(asset_x: str, asset_z: str, interval: int=1) -> np.array:
+def get_ohlc(params: dict, interval: int = 1) -> np.array:
     """
     Get OpenHighLowClose data from kraken for specific pair
     Always returns the latest 720 periods
     Interval: period size in minutes
     """
-    r = requests.get(f"{URL_PUBLIC}/OHLC?pair={asset_x}{asset_z}&interval={interval}")
-    if r.status_code == 200:
-        ohlc = r.json()["result"][f"X{asset_x}Z{asset_z}"]
-        logger.debug("Returning OHLC data")
-        return parse_ohlc_into_arr(ohlc)
-    else:
-        logger.debug(f"Order Book Request Failed: {r.status_code}")
+    response = send_public_request(endpoint="OHLC", interval=interval, **params)
+    if response["error"]:
+        logging.info(f'Error while loading ohlc data: {response["error"]}')
         return None
+    else:
+        ohlc_arr = parse_ohlc_into_arr(response["result"][params["pair"]])
+        return ohlc_arr
 
 
-def get_lasttrades(asset_x: str, asset_z: str) -> np.array:
+def get_lasttrades(params: dict) -> np.array:
     """
     Get last trades from kraken for specific pair
     """
-    r = requests.get(f"{URL_PUBLIC}/Trades?pair={asset_x}{asset_z}")
-    if r.status_code == 200:
-        lasttrades = r.json()["result"][f"X{asset_x}Z{asset_z}"]
-        logger.debug("Returning lasttrade data")
-        return parse_lasttrades_into_arr(lasttrades)
+    response = send_public_request(endpoint="Trades", **params)
+    if response["error"]:
+        logging.info(f'Error while loading lasttrades: {response["error"]}')
+        return None
     else:
-        logger.debug(f"Order Book Request Failed: {r.status_code}")
+        lasttrades_arr = parse_lasttrades_into_arr(response["result"][params["pair"]])
+        return lasttrades_arr
+
+
+def send_public_request(endpoint: str, **kwargs) -> dict:
+    """
+    Send request to the public kraken endpoint
+    """
+    # parse query parameter
+    if kwargs:
+        params_str = "&".join([f"{key}={item}" for key, item in kwargs.items()])
+    else:
+        params_str = ""
+
+    # send get request and check for errors
+    r = requests.get(f"{URL_PUBLIC}/{endpoint}?{params_str}")
+    if r.status_code == 200:
+        return r.json()
+    else:
+        logger.debug(f"Request failed with status code: {r.status_code}")
         return None
 
 
@@ -77,18 +97,16 @@ def parse_orderbook_into_arr(orderbook: list) -> tuple:
     ask side and make sure that the orders are sorted
     """
     ask_arr = np.array(
-        [tuple(x) for x in orderbook["asks"]], 
-    dtype=[("price", float),
-            ("volume", float),
-            ("timestamp", int)])
+        [tuple(x) for x in orderbook["asks"]],
+        dtype=[("price", float), ("volume", float), ("timestamp", int)],
+    )
     bid_arr = np.array(
-        [tuple(x) for x in orderbook["bids"]], 
-    dtype=[("price", float),
-            ("volume", float),
-            ("timestamp", int)])
+        [tuple(x) for x in orderbook["bids"]],
+        dtype=[("price", float), ("volume", float), ("timestamp", int)],
+    )
 
-    ask_arr = ask_arr[ask_arr['price'].argsort()]
-    bid_arr = bid_arr[bid_arr['price'].argsort()[::-1]]
+    ask_arr = ask_arr[ask_arr["price"].argsort()]
+    bid_arr = bid_arr[bid_arr["price"].argsort()[::-1]]
 
     return ask_arr, bid_arr
 
@@ -127,7 +145,7 @@ def parse_lasttrades_into_arr(lasttrades: list) -> np.array:
             ("time", float),
             ("direction", object),
             ("type", object),
-            ("misc", object)
+            ("misc", object),
         ],
     )
     return lasttrades_arr
