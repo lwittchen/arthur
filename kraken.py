@@ -75,15 +75,10 @@ def get_lasttrades(params: dict) -> np.array:
 def send_public_request(endpoint: str, **kwargs) -> dict:
     """
     Send request to the public kraken endpoint
+    kwargs need to be valid query parameters
     """
-    # parse query parameter
-    if kwargs:
-        params_str = "&".join([f"{key}={item}" for key, item in kwargs.items()])
-    else:
-        params_str = ""
-
     # send get request and check for errors
-    r = requests.get(f"{URL_PUBLIC}/{endpoint}?{params_str}")
+    r = requests.get(f"{URL_PUBLIC}/{endpoint}", params=kwargs)
     if r.status_code == 200:
         return r.json()
     else:
