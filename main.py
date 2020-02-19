@@ -10,6 +10,8 @@ import numpy as np
 import kraken
 import utils as ut
 
+from strategies import SobiStrategy
+
 # logging setup
 logging.basicConfig(
     level=logging.INFO,
@@ -23,47 +25,48 @@ def main(params: dict, depth: int, theta: float, sleep_seconds: int):
     Load and log price information from kraken
     """
 
-    # get krakens server time
-    server_time_rfc, _ = kraken.get_server_time()
+    sobi_strategy = SobiStrategy(window_size_fast=10, window_size_slow=60, theta=theta, depth=depth)
 
-    # get open high low close data
-    ohlc: np.array = kraken.get_ohlc(params, interval=1)
+    while True:
 
-    # get last trades
-    lasttrades: np.array = kraken.get_lasttrades(params)
+        # krakens server time
+        server_time_rfc, _ = kraken.get_server_time()
 
-    # order book: dict with ask and bid information
-    # asks and bids are np.arrays
-    _, asks, bids = kraken.get_orderbook(params)
+        # last 720 open high low close periods
+        ohlc: np.array = kraken.get_ohlc(params, interval=1)
 
-    # do some calculations
-    best_bid, best_ask, midprice = ut.calc_midprice(bids, asks)
-    lastprice, _ = ut.get_lastprice(lasttrades)
+        # XXX last trades
+        lasttrades: np.array = kraken.get_lasttrades(params)
 
-    vw_bid, vw_ask = ut.calc_vw_bid_and_offer(bids, asks, depth)
-    imb_bid, imb_ask = ut.calc_imbalances(vw_bid, vw_ask, lastprice)
-    sobi_signal = ut.calc_sobi_signals(imb_bid, imb_ask, theta)
+        # orderbook: dict with ask/bid information - asks and bids are arrays
+        _, bids, asks = kraken.get_orderbook(params)
 
-    # results
-    results = dict(
-        time=server_time_rfc,
-        lastprice=lastprice,
-        midprice=midprice,
-        best_bid=best_bid,
-        best_ask=best_ask,
-        vw_bid=vw_bid,
-        vw_ask=vw_ask,
-        imb_bid=imb_bid,
-        imb_ask=imb_ask,
-        sobi_signal=sobi_signal,
-    )
+        # check if all data is available -> if not, continue iterations
 
-    # log output to console
-    log_msg = ut.get_log_msg(results)
-    logging.info(log_msg)
+        # do stuff
+        best_bid, best_ask, midprice = ut.calc_midprice(bids, asks)
+        sobi_strategy.update_market_state(bids=bids, asks=asks, lasttrades=lasttrades)
+        sobi_strategy.update_signals()
 
-    # conform to krakens call rate limit
-    time.sleep(sleep_seconds)
+        market_state = sobi_strategy.get_market_state()
+        signals = sobi_strategy.get_all_signals()
+
+        # results
+        current_state = dict(
+            time=server_time_rfc,
+            midprice=midprice,
+            best_bid=best_bid,
+            best_ask=best_ask,
+            **market_state, 
+            **signals
+        )
+
+        # log output to console
+        log_msg = ut.get_log_msg(current_state)
+        logging.info(log_msg)
+
+        # conform to krakens call rate limit
+        time.sleep(sleep_seconds)
 
 
 if __name__ == "__main__":
@@ -71,8 +74,7 @@ if __name__ == "__main__":
     # user inputs
     PARAMS = {"pair": "XETHZUSD"}  # payload for kraken server requests
     THETA = 0.5  # threshold variable for the sobi strategy
-    DEPTH = 10  # market depth in percentage
+    DEPTH = 25  # market depth in percentage
     SLEEP_SECONDS = 2  # time between iterations in seconds
 
-    while True:
-        main(params=PARAMS, depth=DEPTH, theta=THETA, sleep_seconds=SLEEP_SECONDS)
+    main(params=PARAMS, depth=DEPTH, theta=THETA, sleep_seconds=SLEEP_SECONDS)

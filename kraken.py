@@ -20,7 +20,7 @@ def get_server_time() -> tuple:
     response = send_public_request(endpoint="Time")
     if response["error"]:
         logging.info(f"Server Time Request Failed: {response.status_code}")
-        return None
+        return None, None
     else:
         server_time_rfc, server_time_unix = (
             response["result"]["rfc1123"],
@@ -37,11 +37,11 @@ def get_orderbook(params: dict) -> tuple:
     response = send_public_request(endpoint="Depth", **params)
     if response["error"]:
         logging.info(f'Error while loading orderbook data: {response["error"]}')
-        return None
+        return None, None, None
     else:
         orderbook = response["result"][params["pair"]]
-        asks, bids = parse_orderbook_into_arr(orderbook)
-        return orderbook, asks, bids
+        bids, asks = parse_orderbook_into_arr(orderbook)
+        return orderbook, bids, asks
 
 
 def get_ohlc(params: dict, interval: int = 1) -> np.array:
@@ -100,10 +100,10 @@ def parse_orderbook_into_arr(orderbook: list) -> tuple:
         dtype=[("price", float), ("volume", float), ("timestamp", int)],
     )
 
-    ask_arr = ask_arr[ask_arr["price"].argsort()]
     bid_arr = bid_arr[bid_arr["price"].argsort()[::-1]]
+    ask_arr = ask_arr[ask_arr["price"].argsort()]
 
-    return ask_arr, bid_arr
+    return bid_arr, ask_arr
 
 
 def parse_ohlc_into_arr(ohlc: list) -> np.array:
