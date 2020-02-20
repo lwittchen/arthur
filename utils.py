@@ -49,8 +49,8 @@ def calc_midprice(bids: np.array, asks: np.array) -> float:
     Calculate midprice based on give ask and bid quotes
     Midprice: average between best bid and best ask
     """
-    best_ask = asks["price"].min()
     best_bid = bids["price"].max()
+    best_ask = asks["price"].min()
     return best_bid, best_ask, np.mean([best_ask, best_bid])
 
 
@@ -70,42 +70,18 @@ def parse_unix_ts(timestamp: int) -> datetime:
     tz_utc = pytz.utc
     temp_datetime = datetime.utcfromtimestamp(int(timestamp))
     return tz_utc.localize(temp_datetime)
-
-
-def calc_imbalances(vw_bid: float, vw_ask: float, lastprice: float):
-    """
-    Calculate buy and sell imbalances following the SOBI strategy proposed 
-    e.g. in: https://www.cis.upenn.edu/~mkearns/projects/sobi.html
-    """
-    return lastprice - vw_bid, vw_ask - lastprice
-
-
-def calc_sobi_signals(imb_bid: float, imb_ask: float, theta: float):
-    """
-    Calculate trade signal following the SOBI strategy proposed 
-    e.g. in: https://www.cis.upenn.edu/~mkearns/projects/sobi.html
-    """
-    if (imb_ask - imb_bid) > theta:
-        # buy signal
-        return 1
-    elif (imb_bid - imb_ask) > theta:
-        # sell signal
-        return -1
-    else:
-        # do nothing
-        return 0
-
+    
 
 def get_log_msg(results: dict):
     """
     Merge all results to one large string to log the results in the command line
     """
     str_fmt = "{:<12}".format
-    num_fmt = "{:<6.2f}".format 
+    num_fmt = "{:<6.2f}".format
     sep = f"\n {'*'*50}"
-    msg = ''
+    msg = ""
     for key, item in results.items():
-        key_str = str_fmt(key)  
+        key_str = str_fmt(key)
         val_str = num_fmt(item) if isinstance(item, float) else str_fmt(item)
         msg += f"\n {key_str}: {val_str}"
     return msg + sep
