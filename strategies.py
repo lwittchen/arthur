@@ -4,16 +4,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class SobiStrategy:
     """
     Storing the current and historic Sobi signals
     """
 
     def __init__(
-        self,
-        window_size: int,
-        theta: float,
-        depth: int,
+        self, window_size: int, theta: float, depth: int,
     ):
         self.signals = dict(current=0, rolling=0,)
         self.last_signals = []
@@ -36,18 +34,20 @@ class SobiStrategy:
 
         if len(self.last_imbalances) == self._window_size:
             # calculate rolling signals
-            rolling_imb_bid, rolling_imb_ask = self.calc_rolling_imbalances() 
+            rolling_imb_bid, rolling_imb_ask = self.calc_rolling_imbalances()
             rolling_signal = self.calc_signal(
                 imb_bid=rolling_imb_bid, imb_ask=rolling_imb_ask, theta=self._theta
             )
-            logger.info(f'Rolling imbalances: bid={rolling_imb_bid} and ask={rolling_imb_ask}')
+            logger.info(
+                f"Rolling imbalances: bid={rolling_imb_bid} and ask={rolling_imb_ask}"
+            )
 
             # update state
             self.signals.update(
                 current=current_signal, rolling=rolling_signal,
             )
         pass
-    
+
     def calc_rolling_imbalances(self) -> tuple:
         """
         calculate rolling bid and ask imbalances
@@ -58,9 +58,9 @@ class SobiStrategy:
         """
         Calculate all necessary parameter to get the sobi signal
         """
-        bids = market_state.get('bids')
-        asks = market_state.get('asks')
-        lasttrades = market_state.get('lasttrades')
+        bids = market_state.get("bids")
+        asks = market_state.get("asks")
+        lasttrades = market_state.get("lasttrades")
 
         vw_bid, vw_ask = ut.calc_vw_bid_and_offer(
             bids=bids, asks=asks, depth=self._depth
@@ -74,14 +74,13 @@ class SobiStrategy:
         self.last_imbalances.insert(0, (imb_bid, imb_ask))
         if len(self.last_imbalances) > self._window_size:
             self.last_imbalances.pop()
-        logger.info(f'Updated rolling imbalances: {len(self.last_imbalances)} rolling obs')
+        logger.info(
+            f"Updated rolling imbalances: {len(self.last_imbalances)} rolling obs"
+        )
 
         # update market state dictionary
         self.indicators.update(
-            vw_bid=vw_bid,
-            vw_ask=vw_ask,
-            imb_bid=imb_bid,
-            imb_ask=imb_ask,
+            vw_bid=vw_bid, vw_ask=vw_ask, imb_bid=imb_bid, imb_ask=imb_ask,
         )
         pass
 

@@ -1,4 +1,4 @@
-import numpy as np 
+import numpy as np
 
 
 class Order:
@@ -21,6 +21,7 @@ class Order:
 
     def __format__(self, format_spec):
         return f"{self.volume}@{self.trade_price}".__format__(format_spec)
+
 
 class Backtest:
     """
@@ -51,16 +52,16 @@ class Backtest:
         Execute Buy/Sell order dependent
         """
         if volume > 0:
-            side = 'buy'
-            trade_price = self.market_state['best_ask']
+            side = "buy"
+            trade_price = self.market_state["best_ask"]
         elif volume < 0:
-            side = 'sell'
-            trade_price = self.market_state['best_bid']
+            side = "sell"
+            trade_price = self.market_state["best_bid"]
         else:
             assert volume != 0, "Wrong Volume - Order Volume == 0"
 
         # store order parameter
-        order_id = self.market_state['time']
+        order_id = self.market_state["time"]
         order = Order(order_id, side, trade_price, volume)
         cashflow = order.get_cashflow()
 
@@ -81,18 +82,17 @@ class Backtest:
         current pnl
         """
         return np.sum(self.pnl) + self.current_position_value()
-    
+
     def current_position_value(self):
         """
         ---
         """
         if self.current_position > 0:
-            return self.current_position * self.market_state['best_bid']
+            return self.current_position * self.market_state["best_bid"]
         elif self.current_position < 0:
-            return self.current_position * self.market_state['best_ask']
+            return self.current_position * self.market_state["best_ask"]
         else:
-            return 0 
+            return 0
 
     def get_last_order(self):
-        return self.all_orders[0] if self.all_orders else '-'
-            
+        return self.all_orders[0] if self.all_orders else "-"

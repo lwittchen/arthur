@@ -82,7 +82,7 @@ def send_public_request(endpoint: str, **kwargs) -> dict:
     if r.status_code == 200:
         return r.json()
     else:
-        logger.debug(f"Request failed with status code: {r.status_code}")
+        logger.warning(f"Request failed with status code: {r.status_code}")
         return None
 
 
