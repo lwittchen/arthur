@@ -1,6 +1,6 @@
 """
 Get public price information from Kraken and calculate trade signals based on
-Static Order Book Imbalances (sobi)
+technical indicators
 """
 
 import time
@@ -10,7 +10,7 @@ import numpy as np
 import kraken
 import utils as ut
 
-from strategies import SobiStrategy
+from strategies import TrendStrategy
 from backtest import Backtest
 
 # logging setup
@@ -22,9 +22,7 @@ logging.basicConfig(
 
 
 def main(
-    params: dict,
-    depth: int,
-    theta: float,
+    payload: dict,
     window_size: int,
     sleep_seconds: int,
     position_size: float,
@@ -33,7 +31,7 @@ def main(
     Load and log price information from kraken
     """
 
-    sobi_strategy = SobiStrategy(window_size=window_size, theta=theta, depth=depth)
+    trend_strategy = TrendStrategy(window_size=window_size)
     backtester = Backtest()
 
     while True:
@@ -41,35 +39,25 @@ def main(
         # krakens server time
         server_time_rfc, server_time_unix = kraken.get_server_time()
 
-        # # last 720 open high low close periods
-        # ohlc: np.array = kraken.get_ohlc(params, interval=1)
+        # last 720 open high low close periods
+        ohlc: np.array = kraken.get_ohlc(payload, interval=1)
 
-        # XXX last trades
-        lasttrades: np.array = kraken.get_lasttrades(params)
-
-        # orderbook: dict with ask/bid information - asks and bids are arrays
-        _, bids, asks = kraken.get_orderbook(params)
-        best_bid, best_ask, midprice = ut.calc_midprice(bids, asks)
         market_state = dict(
             time=server_time_unix,
-            bids=bids,
-            asks=asks,
-            midprice=midprice,
-            best_bid=best_bid,
-            best_ask=best_ask,
-            lasttrades=lasttrades,
+            ohlc=ohlc
         )
 
         # check if all data is available -> if not, continue iterations
         # do stuff
-        sobi_strategy.update_market_state(market_state)
-        sobi_strategy.update_signals()
+        trend_strategy.update_market_state(market_state)
+        trend_strategy.update_indicators()
+        trend_strategy.update_signals()
 
-        indicators = sobi_strategy.get_indicators()
-        signals = sobi_strategy.get_all_signals()
+        indicators = trend_strategy.get_indicators()
+        signals = trend_strategy.get_signals()
 
         # order routing
-        desired_position = signals["rolling"] * position_size
+        desired_position = signals["current"] * position_size
         backtester.update_market_state(market_state)
         backtester.rebalance_position(desired_position)
         pnl = backtester.get_current_profit()
@@ -77,9 +65,7 @@ def main(
 
         current_state = dict(
             time_rfc=server_time_rfc,
-            midprice=market_state["midprice"],
-            best_bid=market_state["best_bid"],
-            best_ask=market_state["best_ask"],
+            ohlc=market_state["ohlc"][-1],
             **indicators,
             **signals,
             last_order=last_order,
@@ -97,17 +83,13 @@ def main(
 if __name__ == "__main__":
 
     # user inputs
-    PARAMS = {"pair": "XETHZUSD"}  # payload for kraken server requests
-    THETA = 0.5  # threshold variable for the sobi strategy
-    DEPTH = 50  # market depth in percentage
+    PAYLOAD = {"pair": "XETHZUSD"}  # payload for kraken server requests
     WINDOW_SIZE = 60
     SLEEP_SECONDS = 2  # time between iterations in seconds
     POSITION_SIZE = 0.1
 
     main(
-        params=PARAMS,
-        depth=DEPTH,
-        theta=THETA,
+        payload=PAYLOAD,
         window_size=WINDOW_SIZE,
         sleep_seconds=SLEEP_SECONDS,
         position_size=POSITION_SIZE,
