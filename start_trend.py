@@ -71,7 +71,7 @@ def main(
 
         current_state = dict(
             time_rfc=server_time_rfc,
-            ohlc=market_state["ohlc"][1],
+            ohlc=market_state["ohlc"][-1],
             best_bid=best_bid,
             best_ask=best_ask,
             **indicators,
