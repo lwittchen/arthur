@@ -24,6 +24,7 @@ logging.basicConfig(
 def main(
     payload: dict,
     window_size: int,
+    adx_threshold: int,
     sleep_seconds: int,
     position_size: float,
 ):
@@ -31,7 +32,7 @@ def main(
     Load and log price information from kraken
     """
 
-    trend_strategy = TrendStrategy(window_size=window_size)
+    trend_strategy = TrendStrategy(window_size=window_size, adx_threshold=adx_threshold)
     backtester = Backtest()
 
     while True:
@@ -41,10 +42,15 @@ def main(
 
         # last 720 open high low close periods
         ohlc: np.array = kraken.get_ohlc(payload, interval=1)
+        _, bids, asks = kraken.get_orderbook(payload)
+        best_bid, best_ask, midprice = ut.calc_midprice(bids, asks)
 
         market_state = dict(
             time=server_time_unix,
-            ohlc=ohlc
+            ohlc=ohlc, 
+            best_bid=best_bid,
+            best_ask=best_ask,
+            midprice=midprice
         )
 
         # check if all data is available -> if not, continue iterations
@@ -65,7 +71,9 @@ def main(
 
         current_state = dict(
             time_rfc=server_time_rfc,
-            ohlc=market_state["ohlc"][-1],
+            ohlc=market_state["ohlc"][1],
+            best_bid=best_bid,
+            best_ask=best_ask,
             **indicators,
             **signals,
             last_order=last_order,
@@ -84,13 +92,15 @@ if __name__ == "__main__":
 
     # user inputs
     PAYLOAD = {"pair": "XETHZUSD"}  # payload for kraken server requests
-    WINDOW_SIZE = 60
-    SLEEP_SECONDS = 2  # time between iterations in seconds
+    WINDOW_SIZE = 30
+    ADX_THRESHOLD = 20
+    SLEEP_SECONDS = 10  # time between iterations in seconds
     POSITION_SIZE = 0.1
 
     main(
         payload=PAYLOAD,
         window_size=WINDOW_SIZE,
+        adx_threshold=ADX_THRESHOLD,
         sleep_seconds=SLEEP_SECONDS,
         position_size=POSITION_SIZE,
     )

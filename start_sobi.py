@@ -41,16 +41,14 @@ def main(
         # krakens server time
         server_time_rfc, server_time_unix = kraken.get_server_time()
 
-        # # last 720 open high low close periods
-        # ohlc: np.array = kraken.get_ohlc(params, interval=1)
-
-        # XXX last trades
+        # n last trades
         lasttrades: np.array = kraken.get_lasttrades(params)
         lastprice, _ = ut.get_lastprice(lasttrades=lasttrades)
 
         # orderbook: dict with ask/bid information - asks and bids are arrays
         _, bids, asks = kraken.get_orderbook(params)
         best_bid, best_ask, midprice = ut.calc_midprice(bids, asks)
+
         market_state = dict(
             time=server_time_unix,
             bids=bids,
@@ -103,7 +101,7 @@ if __name__ == "__main__":
     PARAMS = {"pair": "XETHZUSD"}  # payload for kraken server requests
     THETA = 0.5  # threshold variable for the sobi strategy
     DEPTH = 50  # market depth in percentage
-    WINDOW_SIZE = 60
+    WINDOW_SIZE = 30
     SLEEP_SECONDS = 2  # time between iterations in seconds
     POSITION_SIZE = 0.1
 

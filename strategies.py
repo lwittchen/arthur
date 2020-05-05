@@ -80,9 +80,8 @@ class SobiStrategy(Strategy):
         self.last_imbalances.insert(0, (imb_bid, imb_ask))
         if len(self.last_imbalances) > self._window_size:
             self.last_imbalances.pop()
-            rolling_imb_bid, rolling_imb_ask = self._calc_rolling_imbalances()
-        else:
-            rolling_imb_bid = rolling_imb_ask = None
+        rolling_imb_bid, rolling_imb_ask = self._calc_rolling_imbalances()
+        
         logger.info(
             f"Updated rolling imbalances: {len(self.last_imbalances)} rolling obs"
         )
@@ -108,13 +107,13 @@ class SobiStrategy(Strategy):
         rolling_imb_ask = self.indicators.get("rolling_imb_ask")
 
         current_signal = self._calc_signal(
-            imb_bid=imb_bid, imb_ask=imb_ask, theta=self._theta
+            imb_bid=imb_bid, imb_ask=imb_ask
         )
 
         if len(self.last_imbalances) == self._window_size:
             # calculate rolling signals
             rolling_signal = self._calc_signal(
-                imb_bid=rolling_imb_bid, imb_ask=rolling_imb_ask, theta=self._theta
+                imb_bid=rolling_imb_bid, imb_ask=rolling_imb_ask
             )
             logger.info(
                 f"Rolling imbalances: bid={rolling_imb_bid} and ask={rolling_imb_ask}"
@@ -141,15 +140,15 @@ class SobiStrategy(Strategy):
         si = vw_ask - lastprice
         return bi, si
 
-    def _calc_signal(self, imb_bid: float, imb_ask: float, theta: float) -> int:
+    def _calc_signal(self, imb_bid: float, imb_ask: float) -> int:
         """
         Calculate trade signal following the SOBI strategy proposed 
         e.g. in: https://www.cis.upenn.edu/~mkearns/projects/sobi.html
         """
-        if (imb_ask - imb_bid) > theta:
+        if (imb_ask - imb_bid) > self._theta:
             # buy signal
             return 1
-        elif (imb_bid - imb_ask) > theta:
+        elif (imb_bid - imb_ask) > self._theta:
             # sell signal
             return -1
         else:
@@ -158,10 +157,11 @@ class SobiStrategy(Strategy):
 
 
 class TrendStrategy(Strategy):
-    def __init__(self, window_size):
+    def __init__(self, window_size, adx_threshold):
         self.window_size = window_size
         self.indicators = dict(adx_idx=None, adx_neg=None, adx_pos=None)
         self.signals = dict(current=None)
+        self._adx_threshold = adx_threshold
 
     def update_indicators(self):
         """
@@ -195,12 +195,10 @@ class TrendStrategy(Strategy):
         Calculate signal based on trade recommendations on
         https://school.stockcharts.com/doku.php?id=technical_indicators:average_directional_index_adx
         """
-        if adx_idx > 20:
+        if adx_idx > self._adx_threshold:
             if adx_pos > adx_neg:
                 return 1
             elif adx_neg > adx_pos:
                 return -1
-            else:
-                return 0
         else:
             return 0

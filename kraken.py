@@ -4,6 +4,7 @@ Interface for the Kraken API
 import logging
 import requests
 import numpy as np
+from tenacity import retry, wait_fixed, stop_after_attempt
 
 #### setup
 logger = logging.getLogger(__name__)
@@ -72,6 +73,7 @@ def get_lasttrades(params: dict) -> np.array:
         return lasttrades_arr
 
 
+@retry(wait=wait_fixed(2), stop=stop_after_attempt(5))
 def send_public_request(endpoint: str, **kwargs) -> dict:
     """
     Send request to the public kraken endpoint

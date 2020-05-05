@@ -82,6 +82,9 @@ def get_log_msg(results: dict):
     msg = ""
     for key, item in results.items():
         key_str = str_fmt(key)
-        val_str = num_fmt(item) if isinstance(item, float) else str_fmt(item)
+        if item is not None:
+            val_str = num_fmt(item) if isinstance(item, float) else str_fmt(item)
+        else:
+            val_str = 'None'
         msg += f"\n {key_str}: {val_str}"
     return msg + sep
