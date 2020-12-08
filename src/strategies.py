@@ -20,7 +20,6 @@ class Strategy:
         self._signals = dict()
         self._indicators = dict()
         self.trade_signal = 0
-        
 
     def update_market_state(self, current_state):
         """
@@ -43,14 +42,14 @@ class Strategy:
         Return current state of market
         """
         return self._indicators
-    
+
     def update_indicators(self):
         raise NotImplementedError
 
     def update_signals(self):
         raise NotImplementedError
 
-    @property 
+    @property
     def desired_position(self) -> int:
         """
         Get desired position suggested by
@@ -65,9 +64,7 @@ class SobiStrategy(Strategy):
     Storing the current and historic Sobi signals
     """
 
-    def __init__(
-        self, window_size: int, theta: float, depth: int, **kwargs
-    ):
+    def __init__(self, window_size: int, theta: float, depth: int, **kwargs):
         super().__init__(**kwargs)
         self._signals = dict(current=0, rolling=0,)
         self.last_signals = []
@@ -89,8 +86,8 @@ class SobiStrategy(Strategy):
         Calculate all necessary indicators to get the sobi signal
         """
         last_price = self.market_state.get("public_trades").last_price
-        vw_bid = self.market_state['order_book'].obwa(side='bid', depth=self._depth)
-        vw_ask = self.market_state['order_book'].obwa(side='ask', depth=self._depth)
+        vw_bid = self.market_state["order_book"].obwa(side="bid", depth=self._depth)
+        vw_ask = self.market_state["order_book"].obwa(side="ask", depth=self._depth)
 
         imb_bid, imb_ask = self._calc_imbalances(
             vw_bid=vw_bid, vw_ask=vw_ask, lastprice=last_price
@@ -101,8 +98,8 @@ class SobiStrategy(Strategy):
         if len(self.last_imbalances) > self._window_size:
             self.last_imbalances.pop()
         rolling_imb_bid, rolling_imb_ask = self._calc_rolling_imbalances()
-        
-        logger.info(
+
+        logger.debug(
             f"Updated rolling imbalances: {len(self.last_imbalances)} rolling obs"
         )
 
@@ -126,16 +123,14 @@ class SobiStrategy(Strategy):
         rolling_imb_bid = self._indicators.get("rolling_imb_bid")
         rolling_imb_ask = self._indicators.get("rolling_imb_ask")
 
-        current_signal = self._calc_signal(
-            imb_bid=imb_bid, imb_ask=imb_ask
-        )
+        current_signal = self._calc_signal(imb_bid=imb_bid, imb_ask=imb_ask)
 
         if len(self.last_imbalances) == self._window_size:
             # calculate rolling signals
             rolling_signal = self._calc_signal(
                 imb_bid=rolling_imb_bid, imb_ask=rolling_imb_ask
             )
-            logger.info(
+            logger.debug(
                 f"Rolling imbalances: bid={rolling_imb_bid:.4f} and ask={rolling_imb_ask:.4f}"
             )
 
@@ -143,7 +138,7 @@ class SobiStrategy(Strategy):
             self._signals.update(
                 current=current_signal, rolling=rolling_signal,
             )
-            self.trade_signal = self._signals['rolling']
+            self.trade_signal = self._signals["rolling"]
         pass
 
     def _calc_rolling_imbalances(self) -> np.array:
@@ -210,7 +205,7 @@ class TrendStrategy(Strategy):
         signal = self._calc_signal(adx_idx, adx_neg, adx_pos)
 
         self._signals.update(current=signal)
-        self.trade_signal = self._signals.get('current')
+        self.trade_signal = self._signals.get("current")
         pass
 
     def _calc_signal(self, adx_idx, adx_neg, adx_pos) -> int:
@@ -241,11 +236,12 @@ class WilliamsrStrategy(Strategy):
         ohlc_arr = self.market_state.get("public_trades").ohlc
         ohlc = pd.DataFrame(ohlc_arr)
         Indicator = ta.momentum.WilliamsRIndicator(
-            high=ohlc["high"], low=ohlc["low"], close=ohlc["close"], lbp=self.window_size
+            high=ohlc["high"],
+            low=ohlc["low"],
+            close=ohlc["close"],
+            lbp=self.window_size,
         )
-        self.indicators.update(
-            wr_idx=Indicator.wr().iat[-1],
-        )
+        self.indicators.update(wr_idx=Indicator.wr().iat[-1],)
         return None
 
     def update_signals(self) -> None:
@@ -264,4 +260,3 @@ class WilliamsrStrategy(Strategy):
             return 1
         else:
             return 0
-

@@ -8,7 +8,7 @@ import logging
 import numpy as np
 
 from data_center import DataCenter
-import kraken_client 
+import kraken_client
 import utils as ut
 
 from strategies import SobiStrategy
@@ -34,7 +34,9 @@ def main(
     Load and log price information from kraken
     """
 
-    sobi_strategy = SobiStrategy(window_size=window_size, theta=theta, depth=depth, position_size=position_size)
+    sobi_strategy = SobiStrategy(
+        window_size=window_size, theta=theta, depth=depth, position_size=position_size
+    )
     backtester = Backtest()
     data_center = DataCenter(pair=pair)
 

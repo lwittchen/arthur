@@ -47,10 +47,10 @@ def main(
 
         market_state = dict(
             time=server_time_unix,
-            ohlc=ohlc, 
+            ohlc=ohlc,
             best_bid=best_bid,
             best_ask=best_ask,
-            midprice=midprice
+            midprice=midprice,
         )
 
         # check if all data is available -> if not, continue iterations

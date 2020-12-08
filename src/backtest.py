@@ -31,6 +31,7 @@ class Order:
 class Backtest:
     """
     Order execution, routing and handling
+    todo: add transaction costs
     """
 
     def __init__(self):

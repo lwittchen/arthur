@@ -1,22 +1,22 @@
 """
 Class to distribute and preprocess market data
 """
-import numpy as np 
+import numpy as np
 import kraken_client
-import utils 
+import utils
+
 
 class DataCenter:
-
-    def __init__(self, pair, load_trades: bool=True, load_orderbook: bool=True):
+    def __init__(self, pair, load_trades: bool = True, load_orderbook: bool = True):
         self.pair = pair
         self.load_server_time = True
         self.load_trades = load_trades
-        self.load_orderbook = load_orderbook 
+        self.load_orderbook = load_orderbook
         self.init_empty_market_vars()
 
     def init_empty_market_vars(self) -> None:
         """
-        Initiatiate empty market information
+        Initiate empty market information
         """
         self.server_time_rfc = None
         self.order_book = None
@@ -29,7 +29,7 @@ class DataCenter:
 
         if self.load_server_time:
             # krakens server time
-            self.server_time_rfc, _ = kraken_client.get_server_time()      
+            self.server_time_rfc, _ = kraken_client.get_server_time()
 
         if self.load_orderbook:
             # orderbook: dict with ask/bid information - asks and bids are arrays
@@ -42,7 +42,6 @@ class DataCenter:
 
         return None
 
-
     def get_market_data(self):
         """
         Return most recent data
@@ -51,15 +50,14 @@ class DataCenter:
         return dict(
             time=self.server_time_rfc,
             order_book=self.order_book,
-            public_trades=self.public_trades
+            public_trades=self.public_trades,
         )
-    
+
 
 class OrderBook:
-
     def __init__(self, bids: np.array, asks: np.array):
         self.bids = bids
-        self.asks = asks 
+        self.asks = asks
 
     @property
     def midprice(self) -> float:
@@ -67,22 +65,22 @@ class OrderBook:
         Midprice = mean(best_bid, best_ask)
         """
         best_bid = self.best_bid
-        best_ask = self.best_ask 
+        best_ask = self.best_ask
         return np.mean([best_ask, best_bid])
 
-    @property 
+    @property
     def best_bid(self) -> float:
         """
         Maximum bid on the market
         """
-        return self.bids["price"].max() 
+        return self.bids["price"][0]
 
     @property
-    def best_ask(self) -> float: 
+    def best_ask(self) -> float:
         """ 
         Lower offer on the market
         """
-        return self.asks["price"].min()
+        return self.asks["price"][0]
 
     def obwa(self, side: str, depth: float) -> float:
         """
@@ -94,31 +92,35 @@ class OrderBook:
                 on that side
         """
 
-        arr = self.bids if side == 'bid' else self.asks
+        # check valid inputs
+        if not side in ("bid", "ask") or depth < 0:
+            return None
 
+        arr = self.bids if side == "bid" else self.asks
         total_volume = np.sum(arr["volume"])
         obwa_volume = total_volume * depth / 100
+        idx = np.cumsum(arr["volume"]) <= obwa_volume
 
-        idx = np.cumsum(arr["volume"]) < obwa_volume
         # Make sure that at least the best price
         # is used for the calculation
         if not idx.any():
             idx[0] = True
-        
-        obwa_price = np.sum(arr["price"][idx] * arr["volume"][idx]) / np.sum(arr["volume"][idx])
+
+        obwa_price = np.sum(arr["price"][idx] * arr["volume"][idx]) / np.sum(
+            arr["volume"][idx]
+        )
 
         return obwa_price
 
 
 class PublicTrades:
-
     def __init__(self, ohlc: np.array):
-        self._ohlc = ohlc 
+        self._ohlc = ohlc
 
     @property
-    def ohlc(self) -> np.array: 
-        return self._ohlc 
-    
+    def ohlc(self) -> np.array:
+        return self._ohlc
+
     @property
     def last_price(self) -> float:
         """

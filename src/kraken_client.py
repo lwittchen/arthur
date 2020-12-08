@@ -12,14 +12,13 @@ logger = logging.getLogger(__name__)
 #### constants
 URL_PUBLIC = "https://api.kraken.com/0/public"
 
-
 #### functions
 def get_server_time() -> tuple:
     """
     Get current time from Kraken server
     """
     response = send_public_request(endpoint="Time")
-    if response["error"]:
+    if response.get("error"):
         logging.info(f"Server Time Request Failed: {response.status_code}")
         return None, None
     else:
@@ -35,8 +34,8 @@ def get_orderbook(pair: str) -> tuple:
     """
     Load current order book for asset pair
     """
-    response = send_public_request(endpoint="Depth", payload={'pair': pair})
-    if response["error"]:
+    response = send_public_request(endpoint="Depth", payload={"pair": pair})
+    if response.get("error"):
         logging.info(f'Error while loading orderbook data: {response["error"]}')
         return None, None, None
     else:
@@ -51,13 +50,15 @@ def get_ohlc(pair: str, interval: int = 1) -> np.array:
     Always returns the latest 720 periods
     Interval: period size in minutes
     """
-    response = send_public_request(endpoint="OHLC", payload={'pair': pair, 'interval': interval})
-    if response["error"]:
+    response = send_public_request(
+        endpoint="OHLC", payload={"pair": pair, "interval": interval}
+    )
+    if response.get("error"):
         logging.info(f'Error while loading ohlc data: {response["error"]}')
         return None
     else:
         ohlc_list = response["result"].get(pair)
-        ohlc_arr = parse_ohlc_into_arr(ohlc_list) 
+        ohlc_arr = parse_ohlc_into_arr(ohlc_list)
         return ohlc_arr
 
 
@@ -65,8 +66,8 @@ def get_lasttrades(pair: str) -> np.array:
     """
     Get last trades from kraken for specific pair
     """
-    response = send_public_request(endpoint="Trades", payload={'pair': pair}) 
-    if response["error"]:
+    response = send_public_request(endpoint="Trades", payload={"pair": pair})
+    if response.get("error"):
         logging.info(f'Error while loading lasttrades: {response["error"]}')
         return None
     else:
@@ -87,7 +88,7 @@ def send_public_request(endpoint: str, payload: dict = None) -> dict:
         return r.json()
     else:
         logger.warning(f"Request failed with status code: {r.status_code}")
-        return None
+        return {"error": r.status_code}
 
 
 def parse_orderbook_into_arr(orderbook: list) -> tuple:
