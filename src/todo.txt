@@ -1,0 +1,3 @@
+add tests
+add (hist) backtest functionality
+--> replace 'live' data feed with historic data feed
